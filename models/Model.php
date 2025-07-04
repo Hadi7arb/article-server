@@ -42,10 +42,10 @@ abstract class Model{
     $stmt = static::$connection->prepare($sql);
     
     $types = str_repeat("s", count($data)); // 
-    $stmt->bind_param($types, ...array_values($data));
-    $stmt->execute();
+    $query->bind_param($types, ...array_values($data));
+    $query->execute();
 
-    if ($stmt->affected_rows > 0) {
+    if ($query->affected_rows > 0) {
         $id = static::$connection->insert_id;
         return static::find(static::$connection, $id);
     }
@@ -60,26 +60,38 @@ abstract class Model{
     $setClause = implode(", ", array_map(fn($col) => "$col = ?", array_keys($props)));
     $sql = sprintf("UPDATE %s SET %s WHERE %s = ?", static::$table, $setClause, static::$primary_key);
 
-    $stmt = static::$connection->prepare($sql);
+    $query = static::$connection->prepare($sql);
 
     $types = str_repeat("s", count($props)) . "i";
     $params = array_merge(array_values($props), [$this->{static::$primary_key}]);
 
     $stmt->bind_param($types, ...$params);
-    return $stmt->execute();
+    return $query->execute();
     }
 
 
-    public static function delete(int $id): bool {
+    public static function delete(int $id) {
 
     $sql = sprintf("DELETE FROM %s WHERE %s = ?", static::$table, static::$primary_key);
-    $stmt = static::$connection->prepare($sql);
+    $query = static::$connection->prepare($sql);
 
-    $stmt->bind_param("i", $id);
+    $query->bind_param("i", $id);
     return $stmt->execute();
     }
+    public static function getByCategoryId(mysqli $mysqli, int $categoryId): array {
+        $sql = sprintf("SELECT * FROM %s WHERE category_id = ?", static::$table);
+        $stmt = $mysqli->prepare($sql);
+        $stmt->bind_param("i", $categoryId);
+        $stmt->execute();
 
-
+        $result = $stmt->get_result();
+        $objects = [];
+        while ($row = $result->fetch_assoc()) {
+            $objects[] = new static($row);
+        }
+        return $objects;
+    }
+    
 
 }
 

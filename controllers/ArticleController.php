@@ -38,4 +38,23 @@ class ArticleController{
             echo $this->error("Failed to delete articles", 500);
         }
     }
+    public function getArticlesByCategoryId() {
+        global $mysqli;
+        try {
+            if (!isset($_GET["category_id"])) {
+                echo $this->error("category_id is required", 400);
+                return;
+            }
+            $categoryId = $_GET["category_id"];
+            $articles = Article::findByCategoryId($mysqli, $categoryId);
+            if (!$articles || count($articles) === 0) {
+                echo $this->error("No articles found for this category");
+                return;
+            }
+            $articles_array = ArticleService::articlesToArray($articles);
+            echo $this->success($articles_array);
+        } catch (Exception $e) {
+            echo $this->error("server error: " . $e->getMessage(), 500);
+        }
+    }
 }
