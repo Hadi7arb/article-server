@@ -9,5 +9,11 @@ class ResponseService {
         return json_encode($response);
     }
 
+    public function error_response($message){
+        $response = [];
+        $response["status"] = 500;
+        $response["message"] = $message;
+        return json_encode($response);
+    }
 
 }

@@ -28,18 +28,59 @@ abstract class Model{
 
         $objects = [];
         while($row = $data->fetch_assoc()){
-            $objects[] = new static($row); //creating an object of type "static" / "parent" and adding the object to the array
+            $objects[] = new static($row); 
         }
 
-        return $objects; //we are returning an array of objects!!!!!!!!
+        return $objects; 
     }
 
-    //you have to continue with the same mindset
-    //Find a solution for sending the $mysqli everytime... 
-    //Implement the following: 
-    //1- update() -> non-static function 
-    //2- create() -> static function
-    //3- delete() -> static function 
+    public static function create(array $data): ?static {
+    $columns = implode(", ", array_keys($data));
+    $placeholders = implode(", ", array_fill(0, count($data), "?"));
+    $sql = sprintf("INSERT INTO %s (%s) VALUES (%s)", static::$table, $columns, $placeholders);
+
+    $stmt = static::$connection->prepare($sql);
+    
+    $types = str_repeat("s", count($data)); // 
+    $stmt->bind_param($types, ...array_values($data));
+    $stmt->execute();
+
+    if ($stmt->affected_rows > 0) {
+        $id = static::$connection->insert_id;
+        return static::find(static::$connection, $id);
+    }
+
+    return null;
+    }
+
+    public function update(): bool {
+    $props = get_object_vars($this);
+    unset($props[static::$primary_key]); 
+
+    $setClause = implode(", ", array_map(fn($col) => "$col = ?", array_keys($props)));
+    $sql = sprintf("UPDATE %s SET %s WHERE %s = ?", static::$table, $setClause, static::$primary_key);
+
+    $stmt = static::$connection->prepare($sql);
+
+    $types = str_repeat("s", count($props)) . "i";
+    $params = array_merge(array_values($props), [$this->{static::$primary_key}]);
+
+    $stmt->bind_param($types, ...$params);
+    return $stmt->execute();
+    }
+
+
+    public static function delete(int $id): bool {
+
+    $sql = sprintf("DELETE FROM %s WHERE %s = ?", static::$table, static::$primary_key);
+    $stmt = static::$connection->prepare($sql);
+
+    $stmt->bind_param("i", $id);
+    return $stmt->execute();
+    }
+
+
+
 }
 
 
